@@ -391,14 +391,27 @@
             const typingIndicator = showTypingIndicator();
             
             try {
-                // Prepare the request to Gemini API
+                // Prepare the request to Gemini API with correct structure
                 const requestBody = {
-                    contents: [{
-                        parts: [{
-                            text: message
-                        }]
-                    }]
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                {
+                                    text: message
+                                }
+                            ]
+                        }
+                    ],
+                    generationConfig: {
+                        temperature: 0.7,
+                        topK: 40,
+                        topP: 0.95,
+                        maxOutputTokens: 1024,
+                    }
                 };
+                
+                console.log("Sending request to Gemini API...");
                 
                 // Send request to Gemini API
                 const response = await fetch(API_URL, {
@@ -410,18 +423,27 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`API request failed with status ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('API response error:', response.status, errorText);
+                    throw new Error(`API request failed with status ${response.status}: ${errorText}`);
                 }
                 
                 const data = await response.json();
+                console.log("Gemini API response:", data);
                 
                 // Remove typing indicator
                 typingIndicator.remove();
                 
-                // Extract AI response text
+                // Extract AI response text with proper error handling
                 let aiResponse = "I'm sorry, I couldn't process that request.";
+                
                 if (data.candidates && data.candidates.length > 0) {
-                    aiResponse = data.candidates[0].content.parts[0].text;
+                    const candidate = data.candidates[0];
+                    if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+                        aiResponse = candidate.content.parts[0].text;
+                    }
+                } else if (data.promptFeedback && data.promptFeedback.blockReason) {
+                    aiResponse = `I cannot respond to that message. It was blocked due to: ${data.promptFeedback.blockReason}`;
                 }
                 
                 // Add AI response to chat
@@ -437,8 +459,15 @@
                 // Remove typing indicator
                 typingIndicator.remove();
                 
-                // Show error message
-                addMessage("Sorry, I encountered an error. Please try again.", 'ai');
+                // Show detailed error message
+                let errorMessage = "Sorry, I encountered an error. Please try again.";
+                if (error.message.includes('Failed to fetch')) {
+                    errorMessage = "Network error. Please check your internet connection and try again.";
+                } else if (error.message.includes('API key')) {
+                    errorMessage = "API authentication error. Please check the API configuration.";
+                }
+                
+                addMessage(errorMessage, 'ai');
                 status.textContent = "Error occurred";
             }
         }
@@ -462,6 +491,11 @@
                     status.textContent = "Ready to chat";
                 };
                 
+                utterance.onerror = function(event) {
+                    console.error('Speech synthesis error:', event);
+                    status.textContent = "Speech error occurred";
+                };
+                
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -473,6 +507,12 @@
                 speakText("Hello! I'm your AI assistant. How can I help you today?");
             }, 1000);
         });
+
+        // Add debug info to console
+        console.log("AI Chat Application Loaded");
+        console.log("API Key:", API_KEY ? "Present" : "Missing");
+        console.log("Speech Recognition:", SpeechRecognition ? "Supported" : "Not Supported");
+        console.log("Speech Synthesis:", 'speechSynthesis' in window ? "Supported" : "Not Supported");
     </script>
 </body>
 </html>
