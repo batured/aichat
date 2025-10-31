@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat with Voice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #fdbb2d, #b21f1f);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .subtitle {
+            color: #aaa;
+            font-size: 1rem;
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 60vh;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 15px;
+            border-radius: 18px;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #1a2a6c, #4a54e1);
+            border-bottom-right-radius: 5px;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: linear-gradient(135deg, #b21f1f, #fd6e2d);
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-sender {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .input-area {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 10px;
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .text-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #1a2a6c, #4a54e1);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .voice-btn {
+            background: linear-gradient(135deg, #b21f1f, #fd6e2d);
+        }
+
+        .voice-btn.listening {
+            background: linear-gradient(135deg, #ff0000, #ff6b6b);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            color: #aaa;
+            font-style: italic;
+        }
+
+        .typing-indicator {
+            display: inline-block;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 18px;
+            align-self: flex-start;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                border-radius: 10px;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            .input-area {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Voice Assistant</h1>
+            <p class="subtitle">Chat with AI using text or voice commands</p>
+        </header>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message ai-message">
+                <div class="message-sender">AI Assistant</div>
+                <div class="message-text">Hello! I'm your AI assistant. How can I help you today? You can type your message or use the voice button to speak.</div>
+            </div>
+        </div>
+        
+        <div class="status" id="status">Ready to chat</div>
+        
+        <div class="input-area">
+            <input type="text" class="text-input" id="textInput" placeholder="Type your message here...">
+            <button class="btn" id="sendBtn">Send</button>
+            <button class="btn voice-btn" id="voiceBtn">🎤 Voice</button>
+        </div>
+        
+        <footer>
+            Powered by Gemini AI | Voice Recognition Enabled
+        </footer>
+    </div>
+
+    <script>
+        // Gemini API Configuration
+        const API_KEY = 'AIzaSyCMZwl8pIytgfHQykQhfugOlrK1L5zb8eg';
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`;
+
+        // DOM Elements
+        const chatContainer = document.getElementById('chatContainer');
+        const textInput = document.getElementById('textInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const voiceBtn = document.getElementById('voiceBtn');
+        const status = document.getElementById('status');
+
+        // Speech Recognition Setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isListening = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+                isListening = true;
+                voiceBtn.classList.add('listening');
+                status.textContent = "Listening... Speak now";
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                textInput.value = transcript;
+                isListening = false;
+                voiceBtn.classList.remove('listening');
+                status.textContent = "Processing your voice input...";
+                
+                // Automatically send the voice input after a short delay
+                setTimeout(() => {
+                    sendMessage();
+                }, 500);
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error', event.error);
+                isListening = false;
+                voiceBtn.classList.remove('listening');
+                status.textContent = "Voice recognition error. Please try again.";
+                
+                // Show error in chat
+                addMessage(`Voice recognition error: ${event.error}. Please try again.`, 'ai');
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                voiceBtn.classList.remove('listening');
+                if (status.textContent === "Listening... Speak now") {
+                    status.textContent = "Voice recognition ended";
+                }
+            };
+        } else {
+            voiceBtn.disabled = true;
+            voiceBtn.title = "Speech recognition not supported in this browser";
+            status.textContent = "Voice recognition not supported in your browser";
+        }
+
+        // Voice button event listener
+        voiceBtn.addEventListener('click', function() {
+            if (!isListening) {
+                recognition.start();
+            } else {
+                recognition.stop();
+            }
+        });
+
+        // Send button and Enter key event listeners
+        sendBtn.addEventListener('click', sendMessage);
+        textInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Function to add a message to the chat
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(sender === 'user' ? 'user-message' : 'ai-message');
+            
+            const senderDiv = document.createElement('div');
+            senderDiv.classList.add('message-sender');
+            senderDiv.textContent = sender === 'user' ? 'You' : 'AI Assistant';
+            
+            const textDiv = document.createElement('div');
+            textDiv.classList.add('message-text');
+            textDiv.textContent = text;
+            
+            messageDiv.appendChild(senderDiv);
+            messageDiv.appendChild(textDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to the bottom of the chat
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            return messageDiv;
+        }
+
+        // Function to show typing indicator
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('typing-indicator');
+            typingDiv.id = 'typingIndicator';
+            
+            const dotsDiv = document.createElement('div');
+            dotsDiv.classList.add('typing-dots');
+            
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElement('div');
+                dot.classList.add('typing-dot');
+                dotsDiv.appendChild(dot);
+            }
+            
+            typingDiv.appendChild(dotsDiv);
+            chatContainer.appendChild(typingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            return typingDiv;
+        }
+
+        // Function to send message to Gemini API
+        async function sendMessage() {
+            const message = textInput.value.trim();
+            if (!message) return;
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            
+            // Clear input
+            textInput.value = '';
+            status.textContent = "AI is thinking...";
+            
+            // Show typing indicator
+            const typingIndicator = showTypingIndicator();
+            
+            try {
+                // Prepare the request to Gemini API
+                const requestBody = {
+                    contents: [{
+                        parts: [{
+                            text: message
+                        }]
+                    }]
+                };
+                
+                // Send request to Gemini API
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Remove typing indicator
+                typingIndicator.remove();
+                
+                // Extract AI response text
+                let aiResponse = "I'm sorry, I couldn't process that request.";
+                if (data.candidates && data.candidates.length > 0) {
+                    aiResponse = data.candidates[0].content.parts[0].text;
+                }
+                
+                // Add AI response to chat
+                addMessage(aiResponse, 'ai');
+                status.textContent = "Ready to chat";
+                
+                // Speak the AI response
+                speakText(aiResponse);
+                
+            } catch (error) {
+                console.error('Error calling Gemini API:', error);
+                
+                // Remove typing indicator
+                typingIndicator.remove();
+                
+                // Show error message
+                addMessage("Sorry, I encountered an error. Please try again.", 'ai');
+                status.textContent = "Error occurred";
+            }
+        }
+
+        // Function to speak text using Web Speech API
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                // Stop any ongoing speech
+                window.speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 0.8;
+                
+                utterance.onstart = function() {
+                    status.textContent = "AI is speaking...";
+                };
+                
+                utterance.onend = function() {
+                    status.textContent = "Ready to chat";
+                };
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Initialize with a welcome message
+        window.addEventListener('load', function() {
+            // Add a slight delay to simulate AI "thinking"
+            setTimeout(() => {
+                speakText("Hello! I'm your AI assistant. How can I help you today?");
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
